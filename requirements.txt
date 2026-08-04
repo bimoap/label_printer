@@ -4,3 +4,7 @@ python-barcode
 pillow
 openpyxl
 textwrap
+barcode
+barcode.writer
+io
+os
