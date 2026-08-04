@@ -45,9 +45,9 @@ if uploaded_file:
         WIDTH, HEIGHT = 711, 280
         
         try:
-            # Using Arial for both the side text and the barcode number
-            custom_font = ImageFont.truetype("arial.ttf", 28)
-            barcode_text_font = ImageFont.truetype("arial.ttf", 24)
+            # SIGNIFICANTLY INCREASED FONT SIZES
+            custom_font = ImageFont.truetype("arial.ttf", 36) 
+            barcode_text_font = ImageFont.truetype("arial.ttf", 44) 
         except IOError:
             custom_font = ImageFont.load_default()
             barcode_text_font = ImageFont.load_default()
@@ -65,12 +65,11 @@ if uploaded_file:
                 text_val = str(row[col])
                 text_line = f"{col}: {text_val}"
                 
-                # Truncate text if it's too long
-                if len(text_line) > 22: 
-                    text_line = text_line[:22] + "..."
+                if len(text_line) > 18: 
+                    text_line = text_line[:18] + "..."
                 
                 draw.text((20, y_text), text_line, fill="black", font=custom_font)
-                y_text += 40
+                y_text += 50 # Increased spacing for the larger font
                 
             # --- 2. GENERATE BARCODE (Without Text) ---
             raw_data = str(row[barcode_col])
@@ -81,7 +80,6 @@ if uploaded_file:
             
             rv = io.BytesIO()
             
-            # We turn write_text to False so we can manually control the spacing later
             options = {
                 "write_text": False, 
                 "module_width": 0.4,
@@ -98,28 +96,27 @@ if uploaded_file:
             rv.seek(0)
             bc_img = Image.open(rv)
             
-            # Reserve space for the text we will draw below it
+            # Reduced MAX_BC_HEIGHT to leave room at the bottom for the much larger text
             MAX_BC_WIDTH = 450
-            MAX_BC_HEIGHT = 200 
+            MAX_BC_HEIGHT = 160 
             
             bc_img.thumbnail((MAX_BC_WIDTH, MAX_BC_HEIGHT), Image.Resampling.LANCZOS)
             bc_width, bc_height = bc_img.size
             
-            # Position barcode on the right side, shifted slightly up to leave room for the text
+            # Shifted the barcode up slightly more to accommodate the large number beneath it
             x_offset = WIDTH - bc_width - 20
-            y_offset = (HEIGHT - bc_height) // 2 - 20
+            y_offset = (HEIGHT - bc_height) // 2 - 30
             
             img.paste(bc_img, (x_offset, y_offset))
             
-            # --- 3. MANUALLY DRAW THE BARCODE TEXT ---
-            # Calculate the exact center of the barcode to place the text
+            # --- 3. MANUALLY DRAW THE LARGER BARCODE TEXT ---
             text_bbox = draw.textbbox((0, 0), full_barcode_data, font=barcode_text_font)
             text_width = text_bbox[2] - text_bbox[0]
             
             text_x = x_offset + (bc_width // 2) - (text_width // 2)
             
-            # Set the distance between the barcode and the text here (e.g., + 10 pixels)
-            text_y = y_offset + bc_height + 10 
+            # Adjusted gap between the bars and the new larger text
+            text_y = y_offset + bc_height + 15 
             
             draw.text((text_x, text_y), full_barcode_data, fill="black", font=barcode_text_font)
             
@@ -140,7 +137,6 @@ if uploaded_file:
 
             st.success(f"Successfully generated {len(label_images)} labels!")
             
-            # Show a preview of the first label
             st.subheader("Preview of Label 1")
             st.image(label_images[0], use_container_width=False)
             
