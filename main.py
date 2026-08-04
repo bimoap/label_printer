@@ -70,11 +70,14 @@ if uploaded_file:
                 text_val = str(row[col])
                 text_line = f"{col}: {text_val}"
                 
-                if len(text_line) > 18: 
-                    text_line = text_line[:18] + "..."
+                # Wrap the text to ~16 characters per line so it doesn't hit the barcode
+                wrapped_lines = textwrap.wrap(text_line, width=16)
                 
-                draw.text((20, y_text), text_line, fill="black", font=custom_font)
-                y_text += 50 
+                for line in wrapped_lines:
+                    draw.text((20, y_text), line, fill="black", font=custom_font)
+                    y_text += 40  # Move down for the next line of text
+                
+                y_text += 10 # Add a small extra gap before the next column starts
                 
             # --- 2. GENERATE BARCODE (Without Text) ---
             raw_data = str(row[barcode_col])
