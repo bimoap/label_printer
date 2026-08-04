@@ -45,9 +45,12 @@ if uploaded_file:
         WIDTH, HEIGHT = 711, 280
         
         try:
+            # Using Arial for both the side text and the barcode number
             custom_font = ImageFont.truetype("arial.ttf", 28)
+            barcode_text_font = ImageFont.truetype("arial.ttf", 24)
         except IOError:
             custom_font = ImageFont.load_default()
+            barcode_text_font = ImageFont.load_default()
 
         label_images = []
         progress_bar = st.progress(0)
@@ -62,30 +65,27 @@ if uploaded_file:
                 text_val = str(row[col])
                 text_line = f"{col}: {text_val}"
                 
-                # Truncate text if it's too long so it doesn't bleed into the barcode
+                # Truncate text if it's too long
                 if len(text_line) > 22: 
                     text_line = text_line[:22] + "..."
                 
                 draw.text((20, y_text), text_line, fill="black", font=custom_font)
                 y_text += 40
                 
-            # --- 2. DRAW BARCODE (Strictly on the right side) ---
+            # --- 2. GENERATE BARCODE (Without Text) ---
             raw_data = str(row[barcode_col])
             if raw_data == 'nan' or not raw_data.strip():
                 raw_data = "0000"
                 
-            # Combine the user prefix with the data
             full_barcode_data = f"{barcode_prefix}{raw_data}"
             
             rv = io.BytesIO()
             
-            # Adjusted options to prevent internal barcode text overlap
+            # We turn write_text to False so we can manually control the spacing later
             options = {
-                "write_text": True,
+                "write_text": False, 
                 "module_width": 0.4,
-                "module_height": 12.0, 
-                "text_distance": 4.5,  # Increased distance between bars and text
-                "font_size": 22
+                "module_height": 12.0
             }
             
             try:
@@ -98,20 +98,30 @@ if uploaded_file:
             rv.seek(0)
             bc_img = Image.open(rv)
             
-            # Resize the barcode image so it never exceeds its designated right-side area
+            # Reserve space for the text we will draw below it
             MAX_BC_WIDTH = 450
-            MAX_BC_HEIGHT = 260
+            MAX_BC_HEIGHT = 200 
             
-            # .thumbnail scales the image down while perfectly preserving the aspect ratio
             bc_img.thumbnail((MAX_BC_WIDTH, MAX_BC_HEIGHT), Image.Resampling.LANCZOS)
-            
             bc_width, bc_height = bc_img.size
             
-            # Position on the far right edge, centered vertically
+            # Position barcode on the right side, shifted slightly up to leave room for the text
             x_offset = WIDTH - bc_width - 20
-            y_offset = (HEIGHT - bc_height) // 2
+            y_offset = (HEIGHT - bc_height) // 2 - 20
             
             img.paste(bc_img, (x_offset, y_offset))
+            
+            # --- 3. MANUALLY DRAW THE BARCODE TEXT ---
+            # Calculate the exact center of the barcode to place the text
+            text_bbox = draw.textbbox((0, 0), full_barcode_data, font=barcode_text_font)
+            text_width = text_bbox[2] - text_bbox[0]
+            
+            text_x = x_offset + (bc_width // 2) - (text_width // 2)
+            
+            # Set the distance between the barcode and the text here (e.g., + 10 pixels)
+            text_y = y_offset + bc_height + 10 
+            
+            draw.text((text_x, text_y), full_barcode_data, fill="black", font=barcode_text_font)
             
             label_images.append(img)
             progress_bar.progress((index + 1) / len(df))
@@ -134,7 +144,6 @@ if uploaded_file:
             st.subheader("Preview of Label 1")
             st.image(label_images[0], use_container_width=False)
             
-            # Download Button for the PDF
             st.download_button(
                 label="Download Print-Ready PDF",
                 data=pdf_buffer,
