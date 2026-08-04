@@ -3,4 +3,3 @@ pandas
 python-barcode
 pillow
 openpyxl
-barcode.writer
