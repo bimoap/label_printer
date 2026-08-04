@@ -46,24 +46,32 @@ if uploaded_file:
         # Setup for 203 DPI Thermal Printer Canvas (89x35mm)
         WIDTH, HEIGHT = 711, 280
         
-        # --- AUTO-DOWNLOAD FONT LOGIC ---
+        # --- BULLETPROOF FONT LOGIC ---
         font_filename = "arial.ttf"
         
-        # If arial.ttf isn't in the folder, download OpenSans automatically
+        # If arial.ttf isn't in the folder, securely download OpenSans
         if not os.path.exists(font_filename):
             font_filename = "OpenSans-Regular.ttf"
             if not os.path.exists(font_filename):
                 try:
-                    url = "https://github.com/google/fonts/raw/main/ofl/opensans/OpenSans-Regular.ttf"
-                    urllib.request.urlretrieve(url, font_filename)
+                    # Adding a User-Agent so GitHub doesn't block the download
+                    url = "https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans-Regular.ttf"
+                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                    with urllib.request.urlopen(req) as response, open(font_filename, 'wb') as out_file:
+                        out_file.write(response.read())
                 except Exception as e:
-                    pass # Silently pass to the IOError exception below
+                    # Fallback to a standard Linux server font if download fails
+                    linux_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                    if os.path.exists(linux_font):
+                        font_filename = linux_font
+                    else:
+                        st.warning(f"Font download blocked by server: {e}")
         
         try:
             custom_font = ImageFont.truetype(font_filename, 36) 
             barcode_text_font = ImageFont.truetype(font_filename, 60) 
         except IOError:
-            st.error("Could not load custom fonts. Using tiny default font instead.")
+            st.error(f"Could not load {font_filename}. Using tiny default font instead.")
             custom_font = ImageFont.load_default()
             barcode_text_font = ImageFont.load_default()
 
@@ -84,7 +92,7 @@ if uploaded_file:
                     text_line = text_line[:18] + "..."
                 
                 draw.text((20, y_text), text_line, fill="black", font=custom_font)
-                y_text += 50 # Increased spacing for the larger font
+                y_text += 50 
                 
             # --- 2. GENERATE BARCODE (Without Text) ---
             raw_data = str(row[barcode_col])
@@ -111,14 +119,12 @@ if uploaded_file:
             rv.seek(0)
             bc_img = Image.open(rv)
             
-            # Reduced MAX_BC_HEIGHT to leave room at the bottom for the much larger text
             MAX_BC_WIDTH = 450
             MAX_BC_HEIGHT = 160 
             
             bc_img.thumbnail((MAX_BC_WIDTH, MAX_BC_HEIGHT), Image.Resampling.LANCZOS)
             bc_width, bc_height = bc_img.size
             
-            # Shifted the barcode up slightly more to accommodate the large number beneath it
             x_offset = WIDTH - bc_width - 20
             y_offset = (HEIGHT - bc_height) // 2 - 30
             
@@ -129,8 +135,6 @@ if uploaded_file:
             text_width = text_bbox[2] - text_bbox[0]
             
             text_x = x_offset + (bc_width // 2) - (text_width // 2)
-            
-            # Adjusted gap between the bars and the new larger text
             text_y = y_offset + bc_height + 15 
             
             draw.text((text_x, text_y), full_barcode_data, fill="black", font=barcode_text_font)
