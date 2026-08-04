@@ -45,10 +45,11 @@ if uploaded_file:
         WIDTH, HEIGHT = 711, 280
         
         try:
-            # SIGNIFICANTLY INCREASED FONT SIZES
-            custom_font = ImageFont.truetype("arial.ttf", 36) 
-            barcode_text_font = ImageFont.truetype("arial.ttf", 146) 
+            # Pointing directly to the Windows font folder
+            custom_font = ImageFont.truetype("C:\\Windows\\Fonts\\arial.ttf", 36) 
+            barcode_text_font = ImageFont.truetype("C:\\Windows\\Fonts\\arial.ttf", 60) # Adjust this as needed
         except IOError:
+            st.error("Could not find Arial font. Using tiny default font instead.")
             custom_font = ImageFont.load_default()
             barcode_text_font = ImageFont.load_default()
 
