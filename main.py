@@ -5,11 +5,38 @@ from barcode.writer import ImageWriter
 from PIL import Image, ImageDraw, ImageFont
 import io
 import textwrap
+import os
 
 st.set_page_config(page_title="SATO Label Utility", layout="wide")
 
 st.title("SATO Label Printer Utility (35 x 89 mm)")
 st.write("Upload your data, select your columns, and download a perfectly sized PDF for the thermal printer.")
+
+def get_font(primary_font_path, size):
+    """
+    Attempts to load the primary font. If missing, attempts to load common 
+    Linux server fonts before falling back to the tiny PIL default.
+    """
+    try:
+        return ImageFont.truetype(primary_font_path, size)
+    except IOError:
+        # Common font paths on Linux environments (like Streamlit Cloud)
+        linux_fallbacks = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+        ]
+        
+        for fallback in linux_fallbacks:
+            if os.path.exists(fallback):
+                try:
+                    return ImageFont.truetype(fallback, size)
+                except IOError:
+                    continue
+        
+        # If all else fails, use default and warn the user
+        st.warning(f"⚠️ Font '{primary_font_path}' not found and no system fallbacks available. Text will appear exceptionally small.")
+        return ImageFont.load_default()
 
 # Upload file
 uploaded_file = st.file_uploader("Upload Data (CSV or Excel)", type=["csv", "xlsx"])
@@ -45,17 +72,11 @@ if uploaded_file:
         # Setup for 203 DPI Thermal Printer Canvas (89x35mm)
         WIDTH, HEIGHT = 711, 280
         
-        # --- CLEAN LOCAL FONT LOGIC ---
+        # --- ROBUST FONT LOGIC ---
+        # Ensure arial.ttf is committed to your repository for this to work perfectly.
         font_filename = "arial.ttf"
-        
-        try:
-            # This will perfectly load the font once it is pushed to your repository!
-            custom_font = ImageFont.truetype(font_filename, 20) 
-            barcode_text_font = ImageFont.truetype(font_filename, 60) 
-        except IOError:
-            st.error(f"Could not load {font_filename}. Ensure it is committed and pushed to your repository.")
-            custom_font = ImageFont.load_default()
-            barcode_text_font = ImageFont.load_default()
+        custom_font = get_font(font_filename, 20)
+        barcode_text_font = get_font(font_filename, 60)
 
         label_images = []
         progress_bar = st.progress(0)
