@@ -4,8 +4,6 @@ import barcode
 from barcode.writer import ImageWriter
 from PIL import Image, ImageDraw, ImageFont
 import io
-import os
-import urllib.request
 
 st.set_page_config(page_title="SATO Label Utility", layout="wide")
 
@@ -46,32 +44,15 @@ if uploaded_file:
         # Setup for 203 DPI Thermal Printer Canvas (89x35mm)
         WIDTH, HEIGHT = 711, 280
         
-        # --- BULLETPROOF FONT LOGIC ---
+        # --- CLEAN LOCAL FONT LOGIC ---
         font_filename = "arial.ttf"
         
-        # If arial.ttf isn't in the folder, securely download OpenSans
-        if not os.path.exists(font_filename):
-            font_filename = "OpenSans-Regular.ttf"
-            if not os.path.exists(font_filename):
-                try:
-                    # Adding a User-Agent so GitHub doesn't block the download
-                    url = "https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans-Regular.ttf"
-                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req) as response, open(font_filename, 'wb') as out_file:
-                        out_file.write(response.read())
-                except Exception as e:
-                    # Fallback to a standard Linux server font if download fails
-                    linux_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-                    if os.path.exists(linux_font):
-                        font_filename = linux_font
-                    else:
-                        st.warning(f"Font download blocked by server: {e}")
-        
         try:
+            # This will perfectly load the font once it is pushed to your repository!
             custom_font = ImageFont.truetype(font_filename, 36) 
             barcode_text_font = ImageFont.truetype(font_filename, 60) 
         except IOError:
-            st.error(f"Could not load {font_filename}. Using tiny default font instead.")
+            st.error(f"Could not load {font_filename}. Ensure it is committed and pushed to your repository.")
             custom_font = ImageFont.load_default()
             barcode_text_font = ImageFont.load_default()
 
