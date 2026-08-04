@@ -4,6 +4,7 @@ import barcode
 from barcode.writer import ImageWriter
 from PIL import Image, ImageDraw, ImageFont
 import io
+import textwrap
 
 st.set_page_config(page_title="SATO Label Utility", layout="wide")
 
