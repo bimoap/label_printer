@@ -45,11 +45,11 @@ if uploaded_file:
         WIDTH, HEIGHT = 711, 280
         
         try:
-            # Pointing directly to the Windows font folder
-            custom_font = ImageFont.truetype("C:\\Windows\\Fonts\\arial.ttf", 36) 
-            barcode_text_font = ImageFont.truetype("C:\\Windows\\Fonts\\arial.ttf", 60) # Adjust this as needed
+            # Pointing to the local file in the same folder as app.py
+            custom_font = ImageFont.truetype("arial.ttf", 36) 
+            barcode_text_font = ImageFont.truetype("arial.ttf", 60) 
         except IOError:
-            st.error("Could not find Arial font. Using tiny default font instead.")
+            st.error("Could not find arial.ttf in the project folder. Using tiny default font instead.")
             custom_font = ImageFont.load_default()
             barcode_text_font = ImageFont.load_default()
 
