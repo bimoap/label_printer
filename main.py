@@ -5,7 +5,7 @@ from barcode.writer import ImageWriter
 from PIL import Image, ImageDraw, ImageFont
 import io
 
-st.set_page_config(page_title="Coil Shop Label Utility", layout="wide")
+st.set_page_config(page_title="SATO Label Utility", layout="wide")
 
 st.title("SATO Label Printer Utility (35 x 89 mm)")
 st.write("Upload your data, select your columns, and download a perfectly sized PDF for the thermal printer.")
@@ -20,108 +20,124 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file).astype(str)
         
-    st.subheader("1. Data Preview")
-    st.dataframe(df.head(3))
-    
-    st.subheader("2. Configure Label Format")
-    col1, col2 = st.columns(2)
+    st.subheader("1. Data Configuration")
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         barcode_col = st.selectbox(
-            "Select the Barcode Column (Part No / Stockcode / Drawing No):", 
-            df.columns,
-            help="This column will be converted into a Code128 barcode with the number printed underneath."
+            "Barcode Column:", 
+            df.columns
         )
     with col2:
+        barcode_prefix = st.text_input(
+            "Barcode Prefix (Optional):", 
+            placeholder="e.g., P-",
+            help="This will be added to the front of the barcode data so the scanner knows what it is reading."
+        )
+    with col3:
         text_cols = st.multiselect(
-            "Select additional text columns to print above the barcode:", 
+            "Additional Text Columns (Prints on Left):", 
             df.columns
         )
 
     if st.button("Generate Labels", type="primary"):
-        # Setup for 203 DPI Thermal Printer Canvas
-        # 89mm width = ~711 pixels
-        # 35mm height = ~280 pixels
+        # Setup for 203 DPI Thermal Printer Canvas (89x35mm)
         WIDTH, HEIGHT = 711, 280
         
-        # Try to load a standard font, fallback to default if missing
         try:
-            custom_font = ImageFont.truetype("arial.ttf", 30)
-            small_font = ImageFont.truetype("arial.ttf", 22)
+            custom_font = ImageFont.truetype("arial.ttf", 28)
         except IOError:
             custom_font = ImageFont.load_default()
-            small_font = ImageFont.load_default()
 
         label_images = []
         progress_bar = st.progress(0)
         
         for index, row in df.iterrows():
-            # Create a blank white canvas for each label
             img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
             draw = ImageDraw.Draw(img)
             
-            # --- DRAW ADDITIONAL TEXT ---
-            y_text = 15
+            # --- 1. DRAW TEXT (Strictly on the left side) ---
+            y_text = 20
             for col in text_cols:
-                # Print "Header: Value"
-                text_line = f"{col}: {row[col]}"
+                text_val = str(row[col])
+                text_line = f"{col}: {text_val}"
+                
+                # Truncate text if it's too long so it doesn't bleed into the barcode
+                if len(text_line) > 22: 
+                    text_line = text_line[:22] + "..."
+                
                 draw.text((20, y_text), text_line, fill="black", font=custom_font)
-                y_text += 35 # Move down for the next line
+                y_text += 40
                 
-            # --- DRAW BARCODE & NUMBER ---
-            barcode_data = row[barcode_col]
-            # Replace empty or NaN values with a placeholder to prevent crashing
-            if barcode_data == 'nan' or not barcode_data:
-                barcode_data = "0000"
+            # --- 2. DRAW BARCODE (Strictly on the right side) ---
+            raw_data = str(row[barcode_col])
+            if raw_data == 'nan' or not raw_data.strip():
+                raw_data = "0000"
                 
-            # Generate Code128 Image in memory
-            rv = io.BytesIO()
-            options = {
-                "write_text": True,       # This automatically prints the number below the barcode
-                "module_width": 0.4,      # Width of the bars
-                "module_height": 10.0,    # Height of the bars
-                "text_distance": 5.0,
-                "font_size": 18
-            }
-            code128 = barcode.get('code128', barcode_data, writer=ImageWriter())
-            code128.write(rv, options=options)
+            # Combine the user prefix with the data
+            full_barcode_data = f"{barcode_prefix}{raw_data}"
             
-            # Open the barcode image and paste it onto our main canvas
+            rv = io.BytesIO()
+            
+            # Adjusted options to prevent internal barcode text overlap
+            options = {
+                "write_text": True,
+                "module_width": 0.4,
+                "module_height": 12.0, 
+                "text_distance": 4.5,  # Increased distance between bars and text
+                "font_size": 22
+            }
+            
+            try:
+                code128 = barcode.get('code128', full_barcode_data, writer=ImageWriter())
+                code128.write(rv, options=options)
+            except Exception as e:
+                st.error(f"Error generating barcode for {full_barcode_data}: {e}")
+                continue
+            
             rv.seek(0)
             bc_img = Image.open(rv)
             
-            # Position the barcode at the bottom right (or center)
-            bc_width, bc_height = bc_img.size
-            x_offset = WIDTH - bc_width - 20
-            y_offset = HEIGHT - bc_height - 10
+            # Resize the barcode image so it never exceeds its designated right-side area
+            MAX_BC_WIDTH = 450
+            MAX_BC_HEIGHT = 260
             
-            # If the barcode overlaps text, you can adjust these offsets
+            # .thumbnail scales the image down while perfectly preserving the aspect ratio
+            bc_img.thumbnail((MAX_BC_WIDTH, MAX_BC_HEIGHT), Image.Resampling.LANCZOS)
+            
+            bc_width, bc_height = bc_img.size
+            
+            # Position on the far right edge, centered vertically
+            x_offset = WIDTH - bc_width - 20
+            y_offset = (HEIGHT - bc_height) // 2
+            
             img.paste(bc_img, (x_offset, y_offset))
             
             label_images.append(img)
             progress_bar.progress((index + 1) / len(df))
 
         # Compile all images into a single PDF
-        pdf_buffer = io.BytesIO()
-        label_images[0].save(
-            pdf_buffer, 
-            format='PDF', 
-            resolution=203.0, 
-            save_all=True, 
-            append_images=label_images[1:]
-        )
-        pdf_buffer.seek(0)
+        if label_images:
+            pdf_buffer = io.BytesIO()
+            label_images[0].save(
+                pdf_buffer, 
+                format='PDF', 
+                resolution=203.0, 
+                save_all=True, 
+                append_images=label_images[1:]
+            )
+            pdf_buffer.seek(0)
 
-        st.success(f"Successfully generated {len(label_images)} labels!")
-        
-        # Show a preview of the first label
-        st.subheader("Preview of Label 1")
-        st.image(label_images[0], use_container_width=False)
-        
-        # Download Button for the PDF
-        st.download_button(
-            label="Download Print-Ready PDF",
-            data=pdf_buffer,
-            file_name="SATO_Labels_89x35.pdf",
-            mime="application/pdf"
-        )
+            st.success(f"Successfully generated {len(label_images)} labels!")
+            
+            # Show a preview of the first label
+            st.subheader("Preview of Label 1")
+            st.image(label_images[0], use_container_width=False)
+            
+            # Download Button for the PDF
+            st.download_button(
+                label="Download Print-Ready PDF",
+                data=pdf_buffer,
+                file_name="SATO_Labels_89x35.pdf",
+                mime="application/pdf"
+            )
