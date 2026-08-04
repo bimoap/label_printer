@@ -134,7 +134,7 @@ with tab1:
         with col1:
             barcode_col = st.selectbox("Stockcode Column:", df.columns, key="batch_stock")
         with col2:
-            barcode_prefix = st.text_input("Barcode Prefix (Optional):", placeholder="e.g., P-", key="batch_prefix")
+            barcode_prefix = st.text_input("Barcode Prefix (Optional):", placeholder="e.g., P", key="batch_prefix")
         with col3:
             # Letting you select multiple description columns if needed, but it will just print the text, not the column name.
             text_cols = st.multiselect("Description Column(s):", df.columns, key="batch_desc")
