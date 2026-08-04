@@ -39,8 +39,8 @@ def get_font(primary_font_path, size):
 # --- 1. HARDCODED DEFAULT DATA ---
 # This dictionary replaces the CSV/Excel upload process
 data = {
-    "stockcode": ["151"],
-    "Description": ["114 V DC Electromagnet Assembly"]
+    "stockcode": ["123456789"],
+    "Description": ["Bullshit parts description"]
 }
 
 # Convert the dictionary into a pandas DataFrame
@@ -127,7 +127,7 @@ if st.button("Generate Labels", type="primary"):
         bc_img = Image.open(rv)
         
         MAX_BC_WIDTH = 450
-        MAX_BC_HEIGHT = 160 
+        MAX_BC_HEIGHT = 120 
         
         bc_img.thumbnail((MAX_BC_WIDTH, MAX_BC_HEIGHT), Image.Resampling.LANCZOS)
         bc_width, bc_height = bc_img.size
