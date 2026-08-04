@@ -47,7 +47,7 @@ if uploaded_file:
         try:
             # SIGNIFICANTLY INCREASED FONT SIZES
             custom_font = ImageFont.truetype("arial.ttf", 36) 
-            barcode_text_font = ImageFont.truetype("arial.ttf", 46) 
+            barcode_text_font = ImageFont.truetype("arial.ttf", 146) 
         except IOError:
             custom_font = ImageFont.load_default()
             barcode_text_font = ImageFont.load_default()
