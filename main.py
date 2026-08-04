@@ -49,7 +49,7 @@ if uploaded_file:
         
         try:
             # This will perfectly load the font once it is pushed to your repository!
-            custom_font = ImageFont.truetype(font_filename, 36) 
+            custom_font = ImageFont.truetype(font_filename, 20) 
             barcode_text_font = ImageFont.truetype(font_filename, 60) 
         except IOError:
             st.error(f"Could not load {font_filename}. Ensure it is committed and pushed to your repository.")
