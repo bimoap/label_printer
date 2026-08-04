@@ -4,6 +4,8 @@ import barcode
 from barcode.writer import ImageWriter
 from PIL import Image, ImageDraw, ImageFont
 import io
+import os
+import urllib.request
 
 st.set_page_config(page_title="SATO Label Utility", layout="wide")
 
@@ -44,12 +46,24 @@ if uploaded_file:
         # Setup for 203 DPI Thermal Printer Canvas (89x35mm)
         WIDTH, HEIGHT = 711, 280
         
+        # --- AUTO-DOWNLOAD FONT LOGIC ---
+        font_filename = "arial.ttf"
+        
+        # If arial.ttf isn't in the folder, download OpenSans automatically
+        if not os.path.exists(font_filename):
+            font_filename = "OpenSans-Regular.ttf"
+            if not os.path.exists(font_filename):
+                try:
+                    url = "https://github.com/google/fonts/raw/main/ofl/opensans/OpenSans-Regular.ttf"
+                    urllib.request.urlretrieve(url, font_filename)
+                except Exception as e:
+                    pass # Silently pass to the IOError exception below
+        
         try:
-            # Pointing to the local file in the same folder as app.py
-            custom_font = ImageFont.truetype("arial.ttf", 36) 
-            barcode_text_font = ImageFont.truetype("arial.ttf", 60) 
+            custom_font = ImageFont.truetype(font_filename, 36) 
+            barcode_text_font = ImageFont.truetype(font_filename, 60) 
         except IOError:
-            st.error("Could not find arial.ttf in the project folder. Using tiny default font instead.")
+            st.error("Could not load custom fonts. Using tiny default font instead.")
             custom_font = ImageFont.load_default()
             barcode_text_font = ImageFont.load_default()
 
